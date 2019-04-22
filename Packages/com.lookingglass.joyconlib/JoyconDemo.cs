@@ -3,82 +3,68 @@ using System.Collections.Generic;
 using UnityEngine;
 
 public class JoyconDemo : MonoBehaviour {
-	
+
 	private List<Joycon> joycons;
 
-    // Values made available via Unity
-    public float[] stick;
-    public Vector3 gyro;
-    public Vector3 accel;
-    public int jc_ind = 0;
-    public Quaternion orientation;
+  public float[] stick;
+  public Vector3 gyro1;
+	public Vector3 gyro2;
+  public Vector3 accel1;
+	public Vector3 accel2;
+  public Quaternion orientation1;
+	public Quaternion orientation2;
 
-    void Start ()
-    {
-        gyro = new Vector3(0, 0, 0);
-        accel = new Vector3(0, 0, 0);
-        // get the public Joycon array attached to the JoyconManager in scene
-        joycons = JoyconManager.Instance.j;
-		if (joycons.Count < jc_ind+1){
-			Destroy(gameObject);
-		}
+  void Start () {
+    // get the public Joycon array attached to the JoyconManager in scene
+    joycons = JoyconManager.Instance.j;
 	}
 
-    // Update is called once per frame
-    void Update () {
-		// make sure the Joycon only gets checked if attached
-		if (joycons.Count > 0)
-        {
-			Joycon j = joycons [jc_ind];
+  // Update is called once per frame
+  void Update () {
+		if (joycons.Count == 2) {
+			Joycon j1 = joycons [0];
+			Joycon j2 = joycons [1];
 			// GetButtonDown checks if a button has been pressed (not held)
-            if (j.GetButtonDown(Joycon.Button.SHOULDER_2))
-            {
-				Debug.Log ("Shoulder button 2 pressed");
-				// GetStick returns a 2-element vector with x/y joystick components
-				Debug.Log(string.Format("Stick x: {0:N} Stick y: {1:N}",j.GetStick()[0],j.GetStick()[1]));
-            
+	    if (j1.GetButtonDown(Joycon.Button.SHOULDER_2)) {
 				// Joycon has no magnetometer, so it cannot accurately determine its yaw value. Joycon.Recenter allows the user to reset the yaw value.
-				j.Recenter ();
-			}
-			// GetButtonDown checks if a button has been released
-			if (j.GetButtonUp (Joycon.Button.SHOULDER_2))
-			{
-				Debug.Log ("Shoulder button 2 released");
-			}
-			// GetButtonDown checks if a button is currently down (pressed or held)
-			if (j.GetButton (Joycon.Button.SHOULDER_2))
-			{
-				Debug.Log ("Shoulder button 2 held");
+				j1.Recenter();
 			}
 
-			if (j.GetButtonDown (Joycon.Button.DPAD_DOWN)) {
-				Debug.Log ("Rumble");
-
-				// Rumble for 200 milliseconds, with low frequency rumble at 160 Hz and high frequency rumble at 320 Hz. For more information check:
-				// https://github.com/dekuNukem/Nintendo_Switch_Reverse_Engineering/blob/master/rumble_data_table.md
-
-				j.SetRumble (160, 320, 0.6f, 200);
-
-				// The last argument (time) in SetRumble is optional. Call it with three arguments to turn it on without telling it when to turn off.
-                // (Useful for dynamically changing rumble values.)
-				// Then call SetRumble(0,0,0) when you want to turn it off.
+			if (j2.GetButtonDown(Joycon.Button.SHOULDER_2)) {
+				// Joycon has no magnetometer, so it cannot accurately determine its yaw value. Joycon.Recenter allows the user to reset the yaw value.
+				j2.Recenter();
 			}
 
-            stick = j.GetStick();
-
-            // Gyro values: x, y, z axis values (in radians per second)
-            gyro = j.GetGyro();
-
-            // Accel values:  x, y, z axis values (in Gs)
-            accel = j.GetAccel();
-
-            orientation = j.GetVector();
-			if (j.GetButton(Joycon.Button.DPAD_UP)){
-				gameObject.GetComponent<Renderer>().material.color = Color.red;
-			} else{
-				gameObject.GetComponent<Renderer>().material.color = Color.blue;
+			if (j1.GetButtonDown(Joycon.Button.DPAD_DOWN)) {
+				StartCoroutine(performRumble(j1, j2));
 			}
-            gameObject.transform.rotation = orientation;
-        }
-    }
+
+			if (j2.GetButtonDown(Joycon.Button.DPAD_DOWN)) {
+				StartCoroutine(performRumble(j2, j1));
+			}
+
+	    // Gyro values: x, y, z axis values (in radians per second)
+	    gyro1 = j1.GetGyro();
+			gyro2 = j2.GetGyro();
+
+	    // Accel values:  x, y, z axis values (in Gs)
+	    accel1 = j1.GetAccel();
+			accel2 = j2.GetAccel();
+
+			orientation1 = j1.GetVector();
+	    orientation2 = j2.GetVector();
+	  }
+	}
+
+	// Simulate a throw of a ball by decreasing rumble intensity, then increasing it again
+	IEnumerator performRumble(Joycon throw_j, Joycon catch_j) {
+		for (float val = 1f; val >= 0f; val -= 0.1f) {
+			throw_j.SetRumble(160, 320, val, 100);
+			yield return new WaitForSeconds(0.1f);
+		}
+		for (float val = 0f; val <= 1f; val += 0.1f) {
+			catch_j.SetRumble(160, 320, val, 100);
+			yield return new WaitForSeconds(0.1f);
+		}
+	}
 }
